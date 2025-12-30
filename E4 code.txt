@@ -1,0 +1,89 @@
+import numpy as np
+import math
+
+class NeuralNetwork:
+    def __init__(self, input_size, hidden_size, output_size, learning_rate=0.5):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.learning_rate = learning_rate
+        
+        self.weights_input_hidden = np.random.randn(self.input_size, self.hidden_size)
+        self.weights_hidden_output = np.random.randn(self.hidden_size, self.output_size)
+        
+        self.bias_hidden = np.random.randn(1, self.hidden_size)
+        self.bias_output = np.random.randn(1, self.output_size)
+    
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-np.clip(x, -250, 250)))
+    
+    def sigmoid_derivative(self, x):
+        return x * (1 - x)
+    
+    def forward(self, X):
+        self.hidden_input = np.dot(X, self.weights_input_hidden) + self.bias_hidden
+        self.hidden_output = self.sigmoid(self.hidden_input)
+        
+        self.final_input = np.dot(self.hidden_output, self.weights_hidden_output) + self.bias_output
+        self.final_output = self.sigmoid(self.final_input)
+        
+        return self.final_output
+    
+    def backward(self, X, y, output):
+        self.output_error = y - output
+        self.output_delta = self.output_error * self.sigmoid_derivative(output)
+        
+        self.hidden_error = self.output_delta.dot(self.weights_hidden_output.T)
+        self.hidden_delta = self.hidden_error * self.sigmoid_derivative(self.hidden_output)
+        
+        self.weights_hidden_output += self.hidden_output.T.dot(self.output_delta) * self.learning_rate
+        self.weights_input_hidden += X.T.dot(self.hidden_delta) * self.learning_rate
+        
+        self.bias_output += np.sum(self.output_delta, axis=0, keepdims=True) * self.learning_rate
+        self.bias_hidden += np.sum(self.hidden_delta, axis=0, keepdims=True) * self.learning_rate
+    
+    def train(self, X, y, epochs):
+        for epoch in range(epochs):
+            output = self.forward(X)
+            self.backward(X, y, output)
+            
+            if epoch % 1000 == 0:
+                loss = np.mean(np.square(y - output))
+                print(f"Epoch {epoch}, Loss: {loss:.6f}")
+    
+    def predict(self, X):
+        return self.forward(X)
+
+def main():
+    # XOR dataset
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+    y = np.array([[0], [1], [1], [0]])
+    
+    print("XOR Dataset:")
+    print("Inputs:")
+    print(X)
+    print("Expected Outputs:")
+    print(y)
+    
+    nn = NeuralNetwork(input_size=2, hidden_size=4, output_size=1, learning_rate=0.5)
+    
+    print("\nTraining Neural Network...")
+    nn.train(X, y, epochs=10000)
+    
+    print("\nTesting Neural Network:")
+    predictions = nn.predict(X)
+    
+    print("\nResults:")
+    for i in range(len(X)):
+        print(f"Input: {X[i]}, Expected: {y[i][0]}, Predicted: {predictions[i][0]:.6f}, Rounded: {round(predictions[i][0])}")
+    
+    # Test with new data
+    print("\nTesting with new data:")
+    test_inputs = np.array([[0.5, 0.5], [0.2, 0.8], [0.9, 0.1]])
+    test_predictions = nn.predict(test_inputs)
+    
+    for i in range(len(test_inputs)):
+        print(f"Input: {test_inputs[i]}, Predicted: {test_predictions[i][0]:.6f}, Rounded: {round(test_inputs[i][0]) ^ round(test_inputs[i][1])}")
+
+if __name__ == "__main__":
+    main()

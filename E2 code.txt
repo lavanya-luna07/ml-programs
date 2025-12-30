@@ -1,0 +1,86 @@
+import csv
+
+def load_data():
+    training_data = [
+        ['Sunny', 'Warm', 'Normal', 'Strong', 'Warm', 'Same', 'Yes'],
+        ['Sunny', 'Warm', 'High', 'Strong', 'Warm', 'Same', 'Yes'],
+        ['Rainy', 'Cold', 'High', 'Strong', 'Warm', 'Change', 'No'],
+        ['Sunny', 'Warm', 'High', 'Strong', 'Cool', 'Change', 'Yes']
+    ]
+    return training_data
+
+def initialize_hypotheses(num_attributes):
+    S = ['0'] * num_attributes
+    G = [['?'] * num_attributes]
+    return S, G
+
+def is_consistent(example, hypothesis):
+    for i in range(len(hypothesis)):
+        if hypothesis[i] != '?' and hypothesis[i] != example[i]:
+            return False
+    return True
+
+def more_general(h1, h2):
+    for i in range(len(h1)):
+        if h1[i] != '?' and h1[i] != h2[i] and h2[i] != '?':
+            return False
+    return True
+
+def candidate_elimination(training_data):
+    num_attributes = len(training_data[0]) - 1
+    S, G = initialize_hypotheses(num_attributes)
+    
+    for example in training_data:
+        attributes, label = example[:-1], example[-1]
+        
+        if label == 'Yes':
+            G = [g for g in G if is_consistent(attributes, g)]
+            
+            for i in range(num_attributes):
+                if S[i] != attributes[i]:
+                    S[i] = '?' if S[i] != '0' else attributes[i]
+            
+            G = [g for g in G if more_general(g, S)]
+        
+        else:
+            S = [s for s in [S] if is_consistent(attributes, s)]
+            
+            new_G = []
+            for g in G:
+                if not is_consistent(attributes, g):
+                    for i in range(num_attributes):
+                        if g[i] == '?' and S[i] != attributes[i]:
+                            new_specific = g.copy()
+                            new_specific[i] = S[i]
+                            if more_general(new_specific, S):
+                                new_G.append(new_specific)
+            
+            G = [g for g in G if is_consistent(attributes, g)]
+            G.extend(new_G)
+            
+            unique_G = []
+            for g in G:
+                if not any(more_general(g, g2) for g2 in unique_G if g != g2):
+                    unique_G = [g2 for g2 in unique_G if not more_general(g, g2)]
+                    unique_G.append(g)
+            G = unique_G
+    
+    return S, G
+
+def main():
+    training_data = load_data()
+    
+    print("Training Data:")
+    for i, example in enumerate(training_data):
+        print(f"Example {i+1}: {example}")
+    
+    S, G = candidate_elimination(training_data)
+    
+    print("\nFinal Specific Boundary (S):")
+    print(S)
+    print("\nFinal General Boundary (G):")
+    for hypothesis in G:
+        print(hypothesis)
+
+if __name__ == "__main__":
+    main()
